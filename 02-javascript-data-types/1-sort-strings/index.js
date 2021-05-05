@@ -6,7 +6,7 @@
  */
 export function sortStrings(arr, param = 'asc') {
   return arr.slice().sort(function(a, b) {
-    let result = a.localeCompare(b, ['ru-u-kf-upper', 'en-u-kf-upper']);
+    const result = a.localeCompare(b, ['ru-u-kf-upper', 'en-u-kf-upper']);
 
     if (param === 'asc') {
       return result;
