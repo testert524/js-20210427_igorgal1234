@@ -16,6 +16,6 @@ export function createGetter(path) {
       result = result[arrKeys[i]];
     }
 
-    return value;
+    return result;
   };
 }
