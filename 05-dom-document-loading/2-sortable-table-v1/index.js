@@ -2,7 +2,7 @@ export default class SortableTable {
   element = null;
   subElements = {};
 
-  constructor(headerConfig = [], data = []) {
+  constructor(headerConfig = [], {data = []} = {}) {
     this.headerConfig = headerConfig;
     this.data = data;
 
@@ -16,11 +16,11 @@ export default class SortableTable {
     element.innerHTML = this.template;
     this.element = element.firstElementChild;
 
-    this.subElements = this.getSubElements(element);
+    this.subElements = this.getSubElements(this.element);
   }
 
   getSubElements(parentElement) {
-    const elements = parentElement.querySelectorAll(['data-element']);
+    const elements = parentElement.querySelectorAll('[data-element]');
 
     return [...elements].reduce((accum, subElement) => {
       accum[subElement.dataset.element] = subElement;
@@ -50,7 +50,11 @@ export default class SortableTable {
   get header() {
     return this.headerConfig.map((cell) => {
       return `
-        <div class="sortable-table__cell" data-id="${cell.id}" data-sortable="${cell.sortable}" data-order="${cell.order}">
+        <div class="sortable-table__cell"
+            data-id="${cell.id}"
+            data-sortable="${cell.sortable}"
+            data-order=""
+            data-sort-type="${cell.sortType}">
             <span>${cell.title}</span>
         </div>
       `;
@@ -65,7 +69,7 @@ export default class SortableTable {
         if (cellConfig.hasOwnProperty('template')) {
           result += cellConfig.template(row[cellConfig.id]);
         } else {
-          result += `<div class="sortable-table__cell">${row[cellConfig.id]}</div>`;
+          result += `<div class="sortable-table__cell" data-id="${cellConfig.id}">${row[cellConfig.id]}</div>`;
         }
       }
       result += `</a>`;
@@ -73,6 +77,55 @@ export default class SortableTable {
       return result;
     }).join('');
   }
+
+  sort(field, order) {
+    let sortableCell = null;
+    const sortArrow = `
+        <span data-element="arrow" class="sortable-table__sort-arrow">
+          <span class="sort-arrow"></span>
+        </span>`;
+
+    Array.from(this.subElements.header.children).map((cell) => {
+      const arrow = cell.querySelector('[data-element = arrow]');
+
+      cell.dataset.order = '';
+      if (arrow) {
+        arrow.remove();
+      }
+      if (cell.dataset.id === field) {
+        sortableCell = cell;
+      }
+    });
+
+    if (!sortableCell.dataset.sortable) return;
+
+    sortableCell.dataset.order = order;
+    sortableCell.insertAdjacentHTML('beforeend', sortArrow);
+
+    const sorted = Array.from(this.subElements.body.children).sort((elemA, elemB) => {
+      const a = elemA.querySelector('[data-id = ' + field + ']').innerHTML;
+      const b = elemB.querySelector('[data-id = ' + field + ']').innerHTML;
+      let result = null;
+
+      switch (sortableCell.dataset.sortType) {
+      case 'number':
+        result = a - b;
+        break;
+      case 'string':
+        result = a.localeCompare(b, ['ru-u-kf-upper', 'en-u-kf-upper']);
+        break;
+      }
+
+      if (order === 'asc') {
+        return result;
+      } else if (order === 'desc') {
+        return -result;
+      }
+    });
+    this.subElements.body.innerHTML = '';
+    this.subElements.body.append(...sorted);
+  }
+
 
   initEventListeners () {
     // NOTE: в данном методе добавляем обработчики событий, если они есть
