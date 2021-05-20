@@ -65,13 +65,14 @@ export default class SortableTable {
     return this.data.map((row) => {
       let result = `<a href="/products/${row.id}" class="sortable-table__row">`;
 
-      for (const cellConfig of this.headerConfig) {
+      result += Array.from(this.headerConfig).map((cellConfig) => {
         if (cellConfig.hasOwnProperty('template')) {
-          result += cellConfig.template(row[cellConfig.id]);
+          return cellConfig.template(row[cellConfig.id]);
         } else {
-          result += `<div class="sortable-table__cell" data-id="${cellConfig.id}">${row[cellConfig.id]}</div>`;
+          return `<div class="sortable-table__cell" data-id="${cellConfig.id}">${row[cellConfig.id]}</div>`;
         }
-      }
+      }).join('');
+
       result += `</a>`;
 
       return result;
