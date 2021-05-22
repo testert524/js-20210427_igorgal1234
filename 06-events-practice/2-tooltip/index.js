@@ -2,6 +2,7 @@ class Tooltip {
   static #tooltipInstance = null;
   element = null;
   target = null;
+  SHIFT = 5;
 
   constructor() {
     if (!Tooltip.#tooltipInstance) {
@@ -53,15 +54,12 @@ class Tooltip {
   }
 
   _mousemoveHandler(event) {
-    console.log(event.currentTarget);
     this._moveTo(event.clientX, event.clientY);
   }
 
   _moveTo(pageX, pageY) {
-    const shift = 5;
-
-    this.element.style.left = pageX + shift + 'px';
-    this.element.style.top = pageY + shift + 'px';
+    this.element.style.left = pageX + this.SHIFT + 'px';
+    this.element.style.top = pageY + this.SHIFT + 'px';
   }
 
   remove() {
