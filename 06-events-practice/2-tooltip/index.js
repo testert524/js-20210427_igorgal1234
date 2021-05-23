@@ -1,7 +1,7 @@
 class Tooltip {
   static #tooltipInstance = null;
   element = null;
-  target = null;
+  elementMoveEventListener = null;
   SHIFT = 5;
 
   constructor() {
@@ -13,7 +13,7 @@ class Tooltip {
   }
 
   initialize() {
-    this.mousemoveHandler = this._mousemoveHandler.bind(this);
+    this.pointermoveHandler = this._pointermoveHandler.bind(this);
     this.pointeroverHandler = this._pointeroverHandler.bind(this);
     this.pointeroutHandler = this._pointeroutHandler.bind(this);
     this.initEventListeners();
@@ -38,9 +38,9 @@ class Tooltip {
     this.render();
     this.element.innerHTML = target.dataset.tooltip;
     this._moveTo(event.clientX, event.clientY);
-    this.target = target;
+    this.elementMoveEventListener = target;
 
-    target.addEventListener('pointermove', this.mousemoveHandler);
+    target.addEventListener('pointermove', this.pointermoveHandler);
   }
 
   _pointeroutHandler(event) {
@@ -49,11 +49,11 @@ class Tooltip {
     if (!target) return;
 
     this.remove();
-    this.target = null;
-    target.removeEventListener('pointermove', this.mousemoveHandler);
+    this.elementMoveEventListener = null;
+    target.removeEventListener('pointermove', this.pointermoveHandler);
   }
 
-  _mousemoveHandler(event) {
+  _pointermoveHandler(event) {
     this._moveTo(event.clientX, event.clientY);
   }
 
@@ -70,8 +70,8 @@ class Tooltip {
 
   destroy() {
     this.remove();
-    if (this.target) {
-      this.target.removeEventListener('pointermove', this.mousemoveHandler);
+    if (this.elementMoveEventListener) {
+      this.elementMoveEventListener.removeEventListener('pointermove', this.pointermoveHandler);
     }
     document.removeEventListener('pointerover', this.pointeroverHandler);
     document.removeEventListener('pointerout', this.pointeroutHandler);
