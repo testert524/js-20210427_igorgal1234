@@ -6,6 +6,7 @@ export default class ColumnChart {
   element = null;
   subElements = {};
   chartHeight = 50;
+  ORIGIN = 'https://course-js.javascript.ru';
 
   constructor({
     url = '',
@@ -25,15 +26,12 @@ export default class ColumnChart {
     this.link = link;
 
     this.render();
-    this.initEventListeners();
+    this.update(this.range.from, this.range.to);
   }
 
   async render() {
     this._renderElement();
-    const data = await this._loadData(this.range.from, this.range.to);
     this.subElements = this._getSubElements(this.element);
-    this._renderChart(Object.values(data));
-    this._removeLoadingInd();
   }
 
   async update(from, to) {
@@ -43,10 +41,6 @@ export default class ColumnChart {
     this._removeLoadingInd();
 
     return data;
-  }
-
-  initEventListeners () {
-    // NOTE: в данном методе добавляем обработчики событий, если они есть
   }
 
   remove () {
@@ -61,7 +55,7 @@ export default class ColumnChart {
   }
 
   async _loadData(from, to) {
-    const url = new URL(this.url, 'https://course-js.javascript.ru');
+    const url = new URL(this.url, this.ORIGIN);
 
     url.searchParams.set('from', from);
     url.searchParams.set('to', to);
