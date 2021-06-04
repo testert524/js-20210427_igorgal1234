@@ -9,105 +9,198 @@ export default class SortableTable {
   loadStart = 0;
   loadLength = 30;
 
+  pointerdownHandler = event => {
+    const target = event.target.closest('[data-sortable = "true"]');
+
+    if (!target) return;
+
+    event.preventDefault();
+
+    this.sorted.id = target.dataset.id;
+    this.sorted.order = (target.dataset.order === 'desc') ? 'asc' : 'desc';
+
+    Array.from(this.subElements.header.children).map(cell => cell.dataset.order = '');
+    target.dataset.order = this.sorted.order;
+
+    if (this.isSortLocally) {
+      this.sortOnClient(this.sorted.id, this.sorted.order);
+    } else {
+      this.sortOnServer(this.sorted.id, this.sorted.order);
+    }
+  }
+
+  scrollHandler = async event => {
+    let scrollHeight = Math.max(
+      document.body.scrollHeight, document.documentElement.scrollHeight,
+      document.body.offsetHeight, document.documentElement.offsetHeight,
+      document.body.clientHeight, document.documentElement.clientHeight
+    );
+
+    const firePointer = scrollHeight - document.documentElement.clientHeight;
+
+    if (window.pageYOffset === firePointer) {
+      this.loadStart = this.loadStart + this.loadLength;
+      const loadedData = await this.loadData(this.sorted.id, this.sorted.order, this.loadStart, this.loadLength);
+
+      this.subElements.body.innerHTML += this.getBodyRows(loadedData);
+    }
+  }
 
   constructor(headersConfig, {
     url = '',
     isSortLocally = false,
-    sorted = {}
+    sorted = {
+      id: headersConfig.find(item => item.sortable).id,
+      order: 'asc'
+    }
   } = {}) {
     this.url = url;
     this.isSortLocally = isSortLocally;
     this.headerConfig = headersConfig;
-    this.pointerdownHandler = this._pointerdownHandler.bind(this);
-    this.scrollHandler = this._scrollHandler.bind(this);
-
     this.sorted = sorted;
-    if (!sorted.id) {
-      this.sorted.id = headersConfig.find(item => item.sortable).id || '';
-    }
-    this.sorted.order = sorted.order || 'asc';
 
-    this.init();
-    this.sortableCell = Array.from(this.subElements.header.children).find(item => item.dataset.id === this.sorted.id);
+    this.render();
     this.initEventListeners();
   }
 
-  init() {
+  async render() {
     const element = document.createElement('div');
+    const {id, order} = this.sorted;
 
-    element.innerHTML = this.template;
+    element.innerHTML = this.getTable(this.data);
     this.element = element.firstElementChild;
-
     this.subElements = this.getSubElements(this.element);
 
-    this.initHeader();
-  }
+    this.data = await this.loadData(this.sorted.id, this.sorted.order, this.loadStart, this.loadLength);
 
-  async loadData(addResultToData = false) {
-    if (!this.url) return;
-
-    this.setLoadingInd();
-
-    const url = new URL(this.url, BACKEND_URL);
-
-    if (this.sorted.id) {
-      url.searchParams.set('_sort', this.sorted.id);
-    }
-
-    url.searchParams.set('_order', this.sorted.order);
-    url.searchParams.set('_start', this.loadStart.toString());
-    url.searchParams.set('_end', (this.loadStart + this.loadLength).toString());
-
-    let loadedData = [];
-    try {
-      loadedData = await fetch(url.href);
-      loadedData = await loadedData.json();
-    } catch (err) {
-      console.log(err);
-    }
-
-    if (addResultToData) {
-      this.data = this.data.concat(loadedData);
-    } else {
-      this.data = loadedData;
-    }
-    this.removeLoadingInd();
-  }
-
-  setLoadingInd() {
-    this.subElements.loading.style.display = 'block';
-  }
-
-  removeLoadingInd() {
-    this.subElements.loading.style.display = 'none';
-  }
-
-  sort() {
-    this.isSortLocally ? this.sortOnClient() : this.sortOnServer();
-  }
-
-  sortOnClient () {
-    this.sortData();
-    this.renderHeaderAndBody();
-  }
-
-  sortOnServer (id, order) {
-    this.loadStart = 0;
-    this.render();
-  }
-
-  async render() {
-    await this.loadData();
-    this.renderHeaderAndBody();
-  }
-
-  renderHeaderAndBody() {
     if (this.data.length) {
-      this.renderHeader();
-      this.renderBody();
+      this.subElements.body.innerHTML = this.getBodyRows(this.data);
     } else {
-      this.subElements.emptyPlaceholder.style.display = 'block';
+      Array.from(this.subElements.header.children).map(cell => cell.dataset.order = '');
+      this.showEmptyPlaceholder();
     }
+  }
+
+  getTable(data) {
+    return `
+      <div class="sortable-table">
+          ${this.getHeader()}
+          ${this.getBody(data)}
+          ${this.getLoading()}
+          ${this.getEmptyPlaceholder()}
+      </div>
+    `;
+  }
+
+  getHeader() {
+    return `
+      <div data-element="header" class="sortable-table__header sortable-table__row">${this.getHeaderRow()}</div>
+    `;
+  }
+
+  getHeaderRow() {
+    return this.headerConfig.map(({id, sortable, title}) => {
+      const order = (id === this.sorted.id) ? this.sorted.order : '';
+
+      return `
+        <div class="sortable-table__cell"
+            data-id="${id}"
+            data-sortable="${sortable}"
+            data-order="${order}"
+            <span>${title}</span>
+            <span data-element="arrow" class="sortable-table__sort-arrow">
+                <span class="sort-arrow"></span>
+            </span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  getBody(data) {
+    return `
+      <div data-element="body" class="sortable-table__body">${this.getBodyRows(data)}</div>
+    `;
+  }
+
+  getBodyRows(data) {
+    return data.map((rowData) => {
+      return `
+        <a href="/products/${rowData.id}" class="sortable-table__row">${this.getBodyRow(rowData)}</a>
+      `;
+    }).join('');
+  }
+
+  getBodyRow(rowData) {
+    return Array.from(this.headerConfig).map(({id, template}) => {
+      if (template) {
+        return template(rowData[id]);
+      } else {
+        return `<div class="sortable-table__cell">${rowData[id]}</div>`;
+      }
+    }).join('');
+  }
+
+  getLoading() {
+    return `
+      <div data-element="loading" class="loading-line sortable-table__loading-line"></div>
+    `;
+  }
+
+  getEmptyPlaceholder() {
+    return `
+      <div data-element="emptyPlaceholder" class="sortable-table__empty-placeholder">
+        <div>
+          <p>No products satisfies your filter criteria</p>
+          <button type="button" class="button-primary-outline">Reset all filters</button>
+        </div>
+      </div>
+    `;
+  }
+
+  sortOnClient (id, order) {
+    const sortedData = this.sort(id, order);
+
+    this.subElements.body.innerHTML = this.getBodyRows(sortedData);
+  }
+
+  async sortOnServer (id, order) {
+    this.loadStart = 0;
+
+    const loadedData = await this.loadData(id, order, this.loadStart, this.loadLength);
+
+    if (loadedData.length) {
+      this.subElements.body.innerHTML = this.getBodyRows(loadedData);
+    }
+  }
+
+  sort(id, order) {
+    return Array.from(this.data).sort((productA, productB) => {
+      const a = productA[id];
+      const b = productB[id];
+      const column = this.headerConfig.find(item => item.id === id);
+      const {sortType, customSorting} = column;
+      let result = null;
+
+      switch (sortType) {
+      case 'number':
+        result = a - b;
+        break;
+      case 'string':
+        result = a.localeCompare(b, ['ru-u-kf-upper', 'en-u-kf-upper']);
+        break;
+      case 'custom':
+        result = customSorting(a, b);
+        break;
+      default:
+        result = a - b;
+      }
+
+      if (order === 'asc') {
+        return result;
+      } else if (order === 'desc') {
+        return -result;
+      }
+    });
   }
 
   getSubElements(parentElement) {
@@ -120,150 +213,43 @@ export default class SortableTable {
     }, {});
   }
 
-  get template() {
-    return `
-      <div data-element="productsContainer" class="products-list__container">
-        <div class="sortable-table">
-            <div data-element="header" class="sortable-table__header sortable-table__row"></div>
-            <div data-element="body" class="sortable-table__body"></div>
-            <div data-element="loading" class="loading-line sortable-table__loading-line"></div>
-            <div data-element="emptyPlaceholder" class="sortable-table__empty-placeholder">
-              <div>
-                <p>No products satisfies your filter criteria</p>
-                <button type="button" class="button-primary-outline">Reset all filters</button>
-              </div>
-            </div>
-        </div>
-      </div>
-    `;
-  }
+  async loadData(sortId, sortOrder, start, length) {
+    if (!this.url) return;
 
-  initHeader() {
-    this.subElements.header.innerHTML = this.headerConfig.map((cell) => {
-      return `
-        <div class="sortable-table__cell"
-            data-id="${cell.id}"
-            data-sortable="${cell.sortable}"
-            data-order=""
-            data-sort-type="${cell.sortType}">
-            <span>${cell.title}</span>
-        </div>
-      `;
-    }).join('');
-  }
+    this.setLoadingInd();
 
-  renderBody() {
-    const rows = this.getBodyRows();
+    const url = new URL(this.url, BACKEND_URL);
+    url.searchParams.set('_sort', sortId);
+    url.searchParams.set('_order', sortOrder);
+    url.searchParams.set('_start', start.toString());
+    url.searchParams.set('_end', (start + length).toString());
 
-    this.subElements.body.innerHTML = '';
-    this.subElements.body.append(...rows);
-  }
-
-  getBodyRows() {
-    return this.data.map((rowData) => {
-      const row = this.getBodyRow(rowData);
-
-      row.innerHTML = this.getBodyRowContent(rowData);
-
-      return row;
-    });
-  }
-
-  getBodyRow(rowData) {
-    const rowLink = document.createElement('a');
-    rowLink.setAttribute('href', `/products/${rowData.id}`);
-    rowLink.className = 'sortable-table__row';
-    return rowLink;
-  }
-
-  getBodyRowContent(rowData) {
-    return Array.from(this.headerConfig).map((cellConfig) => {
-      if (cellConfig.hasOwnProperty('template')) {
-        return cellConfig.template(rowData[cellConfig.id]);
-      } else {
-        return `<div class="sortable-table__cell">${rowData[cellConfig.id]}</div>`;
-      }
-    }).join('');
-  }
-
-  get sortArrow() {
-    return `
-        <span data-element="arrow" class="sortable-table__sort-arrow">
-          <span class="sort-arrow"></span>
-        </span>`;
-  }
-
-  renderHeader() {
-    const arrow = this.subElements.header.querySelector('[data-element = arrow]');
-    Array.from(this.subElements.header.children).forEach(item => item.dataset.order = '');
-
-    this.sortableCell.dataset.order = this.sorted.order;
-
-    if (arrow) {
-      this.sortableCell.append(arrow);
-    } else {
-      this.sortableCell.insertAdjacentHTML('beforeend', this.sortArrow);
+    let loadedData = [];
+    try {
+      loadedData = await fetchJson(url.href);
+    } catch (err) {
+      console.log(err);
     }
+    this.removeLoadingInd();
+
+    return loadedData;
   }
 
-  sortData() {
-    this.data = Array.from(this.data).sort((productA, productB) => {
-      const id = this.sorted.id;
-      const order = this.sorted.order;
-      const a = productA[id];
-      const b = productB[id];
-      let result = null;
+  setLoadingInd() {
+    this.subElements.loading.style.display = 'block';
+  }
 
-      switch (this.sortableCell.dataset.sortType) {
-      case 'number':
-        result = a - b;
-        break;
-      case 'string':
-        result = a.localeCompare(b, ['ru-u-kf-upper', 'en-u-kf-upper']);
-        break;
-      }
+  removeLoadingInd() {
+    this.subElements.loading.style.display = 'none';
+  }
 
-      if (order === 'asc') {
-        return result;
-      } else if (order === 'desc') {
-        return -result;
-      }
-    });
+  showEmptyPlaceholder() {
+    this.subElements.emptyPlaceholder.style.display = 'block';
   }
 
   initEventListeners () {
-    this.element.addEventListener('pointerdown', this.pointerdownHandler);
+    this.subElements.header.addEventListener('pointerdown', this.pointerdownHandler);
     window.addEventListener('scroll', this.scrollHandler);
-  }
-
-  async _scrollHandler(event) {
-    let scrollHeight = Math.max(
-      document.body.scrollHeight, document.documentElement.scrollHeight,
-      document.body.offsetHeight, document.documentElement.offsetHeight,
-      document.body.clientHeight, document.documentElement.clientHeight
-    );
-
-    const firePointer = scrollHeight - document.documentElement.clientHeight;
-
-    if (window.pageYOffset === firePointer) {
-      this.loadStart += this.loadLength;
-      await this.loadData(true);
-      this.renderHeaderAndBody();
-    }
-  }
-
-  _pointerdownHandler(event) {
-    const target = event.target.closest('.sortable-table__cell');
-
-    if (target && target.dataset.sortable === 'true') {
-      event.preventDefault();
-
-      this.sortableCell = target;
-      this.sorted.id = target.dataset.id;
-      this.sorted.order = (target.dataset.order === 'desc') ? 'asc' : 'desc';
-
-      this.sort();
-    }
   }
 
   remove () {
