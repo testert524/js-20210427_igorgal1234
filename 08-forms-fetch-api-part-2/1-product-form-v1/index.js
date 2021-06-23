@@ -3,6 +3,7 @@ import fetchJson from './utils/fetch-json.js';
 
 const IMGUR_CLIENT_ID = '28aaa2e823b03b1';
 const BACKEND_URL = 'https://course-js.javascript.ru';
+
 const DEFAULT_PRICE = 100;
 const DEFAULT_DISCOUNT = 0;
 const DEFAULT_QUANTITY = 1;
