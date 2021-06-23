@@ -42,7 +42,8 @@ export default class SortableTable {
       this.loadStart = this.loadStart + this.loadLength;
       const loadedData = await this.loadData(this.sorted.id, this.sorted.order, this.loadStart, this.loadLength);
 
-      this.subElements.body.innerHTML += this.getBodyRows(loadedData);
+      this.data = [...this.data, ...loadedData];
+      this.subElements.body.innerHTML = this.getBodyRows(this.data);
     }
   }
 
@@ -66,7 +67,7 @@ export default class SortableTable {
     const element = document.createElement('div');
     const {id, order} = this.sorted;
 
-    element.innerHTML = this.getTable(this.data);
+    element.innerHTML = this.getTable();
     this.element = element.firstElementChild;
     this.subElements = this.getSubElements(this.element);
 
@@ -83,7 +84,7 @@ export default class SortableTable {
     this.initEventListeners();
   }
 
-  getTable(data) {
+  getTable() {
     return `
       <div class="sortable-table">
           <div data-element="header" class="sortable-table__header sortable-table__row"></div>

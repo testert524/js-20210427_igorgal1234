@@ -6,7 +6,6 @@ export default class ColumnChart {
   element = null;
   subElements = {};
   chartHeight = 50;
-  ORIGIN = 'https://course-js.javascript.ru';
 
   constructor({
     url = '',
@@ -56,10 +55,10 @@ export default class ColumnChart {
   }
 
   async _loadData(from, to) {
-    const url = new URL(this.url, this.ORIGIN);
+    const url = new URL(this.url, BACKEND_URL);
 
-    url.searchParams.set('from', from);
-    url.searchParams.set('to', to);
+    url.searchParams.set('from', from.toISOString());
+    url.searchParams.set('to', to.toISOString());
 
     return await fetchJson(url.href);
   }
