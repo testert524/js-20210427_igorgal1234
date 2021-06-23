@@ -51,7 +51,8 @@ export default class ColumnChart {
 
   destroy() {
     this.remove();
-    // NOTE: удаляем обработчики событий, если они есть
+    this.element = null;
+    this.subElements = {};
   }
 
   async _loadData(from, to) {
@@ -60,9 +61,7 @@ export default class ColumnChart {
     url.searchParams.set('from', from);
     url.searchParams.set('to', to);
 
-    let data = await fetch(url.href);
-
-    return await data.json();
+    return await fetchJson(url.href);
   }
 
   _getSubElements(parentElement) {
@@ -115,10 +114,11 @@ export default class ColumnChart {
     header.innerHTML = data.reduce((sum, dataValue) => sum + dataValue);
     columnChart.innerHTML = "";
 
-    for (const dataProp of dataProps) {
-      let column = `<div style="--value: ${dataProp.value}" data-tooltip="${dataProp.percent}"></div>`;
-      columnChart.insertAdjacentHTML('beforeend', column);
-    }
+    const columns = dataProps.map(dataProp => {
+      return `<div style="--value: ${dataProp.value}" data-tooltip="${dataProp.percent}"></div>`
+    }).join('');
+
+    columnChart.insertAdjacentHTML('beforeend', columns);
   }
 
   _getColumnProps(data) {

@@ -72,6 +72,8 @@ export default class SortableTable {
 
     this.data = await this.loadData(id, order, this.loadStart, this.loadLength);
 
+    this.subElements.header.innerHTML = this.getHeaderRow();
+
     if (this.data.length) {
       this.subElements.body.innerHTML = this.getBodyRows(this.data);
     } else {
@@ -84,17 +86,16 @@ export default class SortableTable {
   getTable(data) {
     return `
       <div class="sortable-table">
-          ${this.getHeader()}
-          ${this.getBody(data)}
-          ${this.getLoading()}
-          ${this.getEmptyPlaceholder()}
+          <div data-element="header" class="sortable-table__header sortable-table__row"></div>
+          <div data-element="body" class="sortable-table__body"></div>
+          <div data-element="loading" class="loading-line sortable-table__loading-line"></div>
+          <div data-element="emptyPlaceholder" class="sortable-table__empty-placeholder">
+            <div>
+              <p>No products satisfies your filter criteria</p>
+              <button type="button" class="button-primary-outline">Reset all filters</button>
+            </div>
+          </div>
       </div>
-    `;
-  }
-
-  getHeader() {
-    return `
-      <div data-element="header" class="sortable-table__header sortable-table__row">${this.getHeaderRow()}</div>
     `;
   }
 
@@ -116,14 +117,8 @@ export default class SortableTable {
     }).join('');
   }
 
-  getBody(data) {
-    return `
-      <div data-element="body" class="sortable-table__body">${this.getBodyRows(data)}</div>
-    `;
-  }
-
   getBodyRows(data) {
-    return data.map((rowData) => {
+    return data.map(rowData => {
       return `
         <a href="/products/${rowData.id}" class="sortable-table__row">${this.getBodyRow(rowData)}</a>
       `;
@@ -138,23 +133,6 @@ export default class SortableTable {
         return `<div class="sortable-table__cell">${rowData[id]}</div>`;
       }
     }).join('');
-  }
-
-  getLoading() {
-    return `
-      <div data-element="loading" class="loading-line sortable-table__loading-line"></div>
-    `;
-  }
-
-  getEmptyPlaceholder() {
-    return `
-      <div data-element="emptyPlaceholder" class="sortable-table__empty-placeholder">
-        <div>
-          <p>No products satisfies your filter criteria</p>
-          <button type="button" class="button-primary-outline">Reset all filters</button>
-        </div>
-      </div>
-    `;
   }
 
   sortOnClient (id, order) {
