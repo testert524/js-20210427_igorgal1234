@@ -8,6 +8,7 @@ export default class SortableTable {
   data = [];
   loadStart = 0;
   loadLength = 30;
+  isLoading = false;
 
   pointerdownHandler = event => {
     const target = event.target.closest('[data-sortable = "true"]');
@@ -38,16 +39,21 @@ export default class SortableTable {
 
     const firePointer = scrollHeight - document.documentElement.clientHeight;
 
-    if (window.pageYOffset === firePointer) {
+    if (window.pageYOffset === firePointer && !this.isLoading) {
       this.loadStart = this.loadStart + this.loadLength;
+
+      this.isLoading = true;
+
       const loadedData = await this.loadData(this.sorted.id, this.sorted.order, this.loadStart, this.loadLength);
 
       this.data = [...this.data, ...loadedData];
       this.subElements.body.innerHTML = this.getBodyRows(this.data);
+
+      this.isLoading = false;
     }
   }
 
-  constructor(headersConfig, {
+  constructor(headersConfig = [], {
     url = '',
     isSortLocally = false,
     sorted = {
@@ -76,10 +82,10 @@ export default class SortableTable {
     this.subElements.header.innerHTML = this.getHeaderRow();
 
     if (this.data.length) {
+      this.element.classList.remove('sortable-table_empty');
       this.subElements.body.innerHTML = this.getBodyRows(this.data);
     } else {
-      Array.from(this.subElements.header.children).map(cell => cell.dataset.order = '');
-      this.showEmptyPlaceholder();
+      this.element.classList.add('sortable-table_empty');
     }
     this.initEventListeners();
   }
@@ -92,8 +98,7 @@ export default class SortableTable {
           <div data-element="loading" class="loading-line sortable-table__loading-line"></div>
           <div data-element="emptyPlaceholder" class="sortable-table__empty-placeholder">
             <div>
-              <p>No products satisfies your filter criteria</p>
-              <button type="button" class="button-primary-outline">Reset all filters</button>
+              <p>No items</p>
             </div>
           </div>
       </div>
@@ -153,11 +158,12 @@ export default class SortableTable {
   }
 
   sort(id, order) {
+    const column = this.headerConfig.find(item => item.id === id);
+    const {sortType, customSorting} = column;
+
     return Array.from(this.data).sort((productA, productB) => {
       const a = productA[id];
       const b = productB[id];
-      const column = this.headerConfig.find(item => item.id === id);
-      const {sortType, customSorting} = column;
       let result = null;
 
       switch (sortType) {
@@ -222,13 +228,9 @@ export default class SortableTable {
     this.subElements.loading.style.display = 'none';
   }
 
-  showEmptyPlaceholder() {
-    this.subElements.emptyPlaceholder.style.display = 'block';
-  }
-
   initEventListeners () {
     this.subElements.header.addEventListener('pointerdown', this.pointerdownHandler);
-    window.addEventListener('scroll', this.scrollHandler);
+    document.addEventListener('scroll', this.scrollHandler);
   }
 
   remove () {
@@ -241,5 +243,6 @@ export default class SortableTable {
     this.remove();
     this.element = null;
     this.subElements = {};
+    document.removeEventListener('scroll', this.scrollHandler);
   }
 }
