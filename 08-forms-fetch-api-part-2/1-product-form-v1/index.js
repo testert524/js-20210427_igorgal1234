@@ -35,7 +35,8 @@ export default class ProductForm {
           source: imgFile.name,
           url: response.data.link
         };
-        this.setImgToProduct(this.product, img);
+
+        this.product.images.push(img);
         this.pushToImagesList(img);
       }
     };
@@ -55,12 +56,12 @@ export default class ProductForm {
   save = async () => {
     const form = this.subElements.productForm;
 
-    if (!this.validateForm(form)) return;
+    if (!this.isFormValid(form)) return;
 
     let method = 'PUT';
     let event = 'product-saved';
 
-    if (this.product.id) {
+    if (this.productId) {
       method = 'PATCH';
       event = 'product-updated';
     }
@@ -80,7 +81,7 @@ export default class ProductForm {
       const response = await fetchJson(url.href, params);
 
       this.element.dispatchEvent(new CustomEvent(event, {
-        detail: { event: event }
+        detail: { response: response }
       }));
     } catch (error) {
       console.log('error', error);
@@ -98,21 +99,22 @@ export default class ProductForm {
     this.element = wrapper.firstElementChild;
     this.subElements = this.getSubElements(this.element);
 
-    this.initEventListeners();
     const data = await this.loadData(this.productId);
 
     this.product = data.product;
 
-    this.fillCatSelect(data.categories, this.product.subcategory);
+    if (this.product) {
+      if (this.productId) {
+        this.fillFormWithObject(this.subElements.productForm, this.product);
+      } else {
+        this.fillFormWithDefaults(this.subElements.productForm);
+      }
 
-    if (this.product.id) {
-      this.fillFormWithObject(this.subElements.productForm, this.product);
-    } else {
-      this.fillFormWithDefaults(this.subElements.productForm);
-    }
-
-    if (this.product.hasOwnProperty('images')) {
+      this.fillCatSelect(data.categories, this.product.subcategory);
       this.fillImages(this.product.images);
+      this.initEventListeners();
+    } else {
+      this.element.innerHTML = this.getEmptyTemplate();
     }
 
     return this.element;
@@ -127,7 +129,7 @@ export default class ProductForm {
     formEls.save.addEventListener('pointerdown', this.save);
   }
 
-  validateForm(form) {
+  isFormValid(form) {
     let isValid = true;
 
     Array.from(form.elements).forEach(element => {
@@ -160,14 +162,6 @@ export default class ProductForm {
     }
   }
 
-  setImgToProduct(product, img) {
-    if (product.images) {
-      product.images.push(img);
-    } else {
-      product.images = [img];
-    }
-  }
-
   pushToImagesList(img) {
     const list = this.subElements.imageListContainer.querySelector('.sortable-list');
 
@@ -176,9 +170,7 @@ export default class ProductForm {
 
   removeImgFromProduct(product, img) {
     const index = product.images.findIndex(image => {
-      if (image.source === img.source && image.url === img.url) {
-        return true;
-      }
+      return image.source === img.source && image.url === img.url;
     });
 
     product.images.splice(index, 1);
@@ -201,10 +193,10 @@ export default class ProductForm {
 
     formEls.title.value = object.title;
     formEls.description.value = object.description;
-    formEls.price.value = object.price.toString();
-    formEls.discount.value = object.discount.toString();
-    formEls.quantity.value = object.quantity.toString();
-    formEls.status.value = object.status.toString();
+    formEls.price.value = object.price;
+    formEls.discount.value = object.discount;
+    formEls.quantity.value = object.quantity;
+    formEls.status.value = object.status;
   }
 
   fillFormWithDefaults(form) {
@@ -245,12 +237,12 @@ export default class ProductForm {
 
   async loadData(id = null) {
     try {
-      let [categories, product] = await Promise.all([
-        this.getProductDataPromise(id),
-        this.getCategoriesPromise()
+      let [categories, [product]] = await Promise.all([
+        this.getCategoriesPromise(),
+        this.getProductDataPromise(id)
       ]);
 
-      return {product: product[0], categories};
+      return {categories, product};
     } catch (err) {
       console.log(err);
     }
@@ -263,7 +255,10 @@ export default class ProductForm {
 
       return fetchJson(productUrl.href);
     } else {
-      return Promise.resolve([{}]);
+      return [{
+        id: Date.now().toString(),
+        images: []
+      }];
     }
   }
 
@@ -362,6 +357,13 @@ export default class ProductForm {
           </div>
         </form>
       </div>`;
+  }
+
+  getEmptyTemplate () {
+    return `<div>
+      <h1 class="page-title">Страница не найдена</h1>
+      <p>Извините, данный товар не существует</p>
+    </div>`;
   }
 
   remove() {
