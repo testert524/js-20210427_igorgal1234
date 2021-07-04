@@ -1,10 +1,9 @@
-const DEFAULT_TOP_SHIFT = 5;
-
 export default class SortableList {
   element = null;
   draggable = null;
   placeholder = null;
   pointerShift = {};
+  defaultTopShift = 5;
 
   pointerdownHandler = event => {
     const target = event.target;
@@ -32,10 +31,10 @@ export default class SortableList {
     const isPrevAppropriate = prev && prev !== this.draggable;
     const isNextAppropriate = next && next !== this.draggable;
 
-    if (isPrevAppropriate && (prev.getBoundingClientRect().bottom + DEFAULT_TOP_SHIFT > draggableBottom)) {
+    if (isPrevAppropriate && (prev.getBoundingClientRect().bottom + this.defaultTopShift > draggableBottom)) {
       this.placeholder.replaceWith(prev);
       prev.before(this.placeholder);
-    } else if (isNextAppropriate && (next.getBoundingClientRect().bottom - DEFAULT_TOP_SHIFT < draggableBottom)) {
+    } else if (isNextAppropriate && (next.getBoundingClientRect().bottom - this.defaultTopShift < draggableBottom)) {
       this.placeholder.replaceWith(next);
       next.after(this.placeholder);
     }
@@ -70,7 +69,7 @@ export default class SortableList {
   render() {
     this.element = document.createElement('ul');
     this.element.className = 'sortable-list' ;
-    this.element.innerHTML = [...this.items].map(item => {
+    this.element.innerHTML = this.items.map(item => {
       item.classList.add('sortable-list__item');
 
       return item.outerHTML;
@@ -90,20 +89,18 @@ export default class SortableList {
   grabListItem(event) {
     const draggable = event.target.closest('.sortable-list__item');
     const placeholder = document.createElement('div');
-
+    const necessaryStyles = ['height', 'width'];
     const draggableStyles = getComputedStyle(draggable);
-    const styles = {
-      height: draggableStyles.height,
-      width: draggableStyles.width
-    };
+
+    necessaryStyles.forEach(styleName => {
+      placeholder['style'][styleName] = draggableStyles[styleName];
+      draggable['style'][styleName] = draggableStyles[styleName];
+    });
 
     this.pointerShift = this.getPointerShift(draggable, event);
 
     draggable.classList.add('sortable-list__item_dragging');
     placeholder.className = 'sortable-list__placeholder';
-
-    this.applyStyles(placeholder, styles);
-    this.applyStyles(draggable, styles);
 
     draggable.before(placeholder);
     this.element.append(draggable);
@@ -114,12 +111,6 @@ export default class SortableList {
 
     this.draggable = draggable;
     this.placeholder = placeholder;
-  }
-
-  applyStyles(element, styles) {
-    Object.entries(styles).forEach(appliedStyle => {
-      element.style[appliedStyle[0]] = appliedStyle[1];
-    });
   }
 
   getPointerShift(draggable, event) {
@@ -133,7 +124,7 @@ export default class SortableList {
 
   move(element, clientX, clientY) {
     element.style.left = clientX - this.pointerShift.shiftX + 'px';
-    element.style.top = clientY - this.pointerShift.shiftY + DEFAULT_TOP_SHIFT + 'px';
+    element.style.top = clientY - this.pointerShift.shiftY + this.defaultTopShift + 'px';
   }
 
   remove() {
