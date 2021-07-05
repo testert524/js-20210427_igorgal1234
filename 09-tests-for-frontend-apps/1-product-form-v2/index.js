@@ -50,12 +50,6 @@ export default class ProductForm {
     input.dispatchEvent(new MouseEvent("click"));
   };
 
-  removeImage = event => {
-    if (event.target.dataset.hasOwnProperty('deleteHandle')) {
-      event.target.closest('li').remove();
-    }
-  };
-
   submit = event => {
     event.preventDefault();
 
@@ -84,6 +78,7 @@ export default class ProductForm {
       this.subElements = this.getSubElements(this.element);
 
       this.fillFormWithObject(this.subElements.productForm, this.product);
+      this.initSortableListForImages();
 
       this.initEventListeners();
     }
@@ -91,11 +86,23 @@ export default class ProductForm {
     return this.element;
   }
 
+  initSortableListForImages() {
+    const listContainer = this.subElements.imageListContainer;
+    const sortableList = new SortableList({
+      items: [...listContainer.children]
+    });
+    const sortableListContainer = sortableList.element;
+
+    sortableListContainer.dataset.element = listContainer.dataset.element;
+
+    listContainer.replaceWith(sortableListContainer);
+    this.subElements.imageListContainer = sortableListContainer;
+  }
+
   initEventListeners() {
     const {productForm, imageListContainer} = this.subElements;
 
     productForm.addEventListener('submit', this.submit);
-    imageListContainer.addEventListener('pointerdown', this.removeImage);
     productForm.elements.uploadImage.addEventListener('pointerdown', this.loadImage);
   }
 
