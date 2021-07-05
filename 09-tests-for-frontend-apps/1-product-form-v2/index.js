@@ -43,7 +43,7 @@ export default class ProductForm {
           url: response.data.link
         };
 
-        this.subElements.imageListContainer.append(this.getImageElement(img));
+        this.subElements.imageListContainer.firstElementChild.append(this.getImageElement(img));
       }
     };
 
@@ -78,25 +78,12 @@ export default class ProductForm {
       this.subElements = this.getSubElements(this.element);
 
       this.fillFormWithObject(this.subElements.productForm, this.product);
-      this.initSortableListForImages();
+      this.setSortableImageList();
 
       this.initEventListeners();
     }
 
     return this.element;
-  }
-
-  initSortableListForImages() {
-    const listContainer = this.subElements.imageListContainer;
-    const sortableList = new SortableList({
-      items: [...listContainer.children]
-    });
-    const sortableListContainer = sortableList.element;
-
-    sortableListContainer.dataset.element = listContainer.dataset.element;
-
-    listContainer.replaceWith(sortableListContainer);
-    this.subElements.imageListContainer = sortableListContainer;
   }
 
   initEventListeners() {
@@ -237,14 +224,14 @@ export default class ProductForm {
     return wrapper.innerHTML;
   }
 
-  getImageListHTML() {
-    const wrapper = document.createElement('div');
+  setSortableImageList() {
+    const items = this.product.images.map(image => {
+      return this.getImageElement(image);
+    });
 
-    wrapper.innerHTML = this.product.images.map(image => {
-      return this.getImageElement(image).outerHTML;
-    }).join('');
+    const sortableList = new SortableList({items});
 
-    return wrapper.innerHTML;
+    this.subElements.imageListContainer.append(sortableList.element);
   }
 
   getImageElement(image) {
@@ -296,9 +283,7 @@ export default class ProductForm {
           <div class="form-group form-group__wide">
             <label class="form-label">Фото</label>
 
-            <ul class="sortable-list" data-element="imageListContainer">
-                ${this.getImageListHTML()}
-            </ul>
+            <div data-element="imageListContainer"></div>
 
             <button type="button"
                     name="uploadImage"
