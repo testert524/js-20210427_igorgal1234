@@ -14,21 +14,20 @@ export default class ColumnChart {
       to: new Date(),
     },
     label = '',
-    value = '',
     link = '#',
     formatHeading = data => data
   } = {}) {
     this.url = url;
     this.range = range;
     this.label = label;
-    this.value = formatHeading(value);
     this.link = link;
+    this.formatHeading = formatHeading;
 
     this.render();
     this.update(this.range.from, this.range.to);
   }
 
-  async render() {
+  render() {
     this._renderElement();
     this.subElements = this._getSubElements(this.element);
   }
@@ -36,7 +35,8 @@ export default class ColumnChart {
   async update(from, to) {
     this._setLoadingInd();
     const data = await this._loadData(from, to);
-    this._renderChart(Object.values(data));
+    this._renderChart(data);
+    this.setNewRange(from, to);
     this._removeLoadingInd();
 
     return data;
@@ -91,7 +91,7 @@ export default class ColumnChart {
         <a href="${this.link}" class="column-chart__link">View all</a>
       </div>
       <div class="column-chart__container">
-        <div data-element="header" class="column-chart__header">${this.value}</div>
+        <div data-element="header" class="column-chart__header"></div>
         <div data-element="body" class="column-chart__chart">
         </div>
       </div>
@@ -102,22 +102,26 @@ export default class ColumnChart {
   }
 
   _renderChart(data = []) {
-    if (data.length === 0) {
-      return;
-    }
+    if (!data) return;
+
+    const dataValues = Object.values(data);
+
+    if (!dataValues.length) return;
 
     const columnChart = this.subElements.body;
     const header = this.subElements.header;
-    const dataProps = this._getColumnProps(data);
+    const dataProps = this._getColumnProps(dataValues);
 
-    header.innerHTML = data.reduce((sum, dataValue) => sum + dataValue);
-    columnChart.innerHTML = "";
+    header.innerHTML = this.formatHeading(dataValues.reduce((sum, dataValue) => sum + dataValue));
 
-    const columns = dataProps.map(dataProp => {
-      return `<div style="--value: ${dataProp.value}" data-tooltip="${dataProp.percent}"></div>`
+    columnChart.innerHTML = dataProps.map(dataProp => {
+      return `<div style="--value: ${dataProp.value}" data-tooltip="${dataProp.percent}"></div>`;
     }).join('');
+  }
 
-    columnChart.insertAdjacentHTML('beforeend', columns);
+  setNewRange(from, to) {
+    this.from = from;
+    this.to = to;
   }
 
   _getColumnProps(data) {
