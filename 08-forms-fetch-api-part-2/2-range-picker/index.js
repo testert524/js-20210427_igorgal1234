@@ -44,9 +44,7 @@ export default class RangePicker {
   handleControlArrows = event => {
     const className = event.target.className;
     const direction = className.slice(className.lastIndexOf('-') + 1);
-    const firstTimeElement = this.subElements.selector.querySelector('time');
-    const dateOfFirstMonth = new Date(firstTimeElement.getAttribute('datetime'));
-    let month = dateOfFirstMonth.getMonth();
+    let month = this.showDateFrom.getMonth();
 
     if (direction === 'right') {
       month += 1;
@@ -54,8 +52,8 @@ export default class RangePicker {
       month -= 1;
     }
 
-    dateOfFirstMonth.setMonth(month);
-    this.renderSelector(dateOfFirstMonth);
+    this.showDateFrom.setMonth(month);
+    this.renderSelector(this.showDateFrom);
   };
 
   toggleSelector = event => {
@@ -82,6 +80,7 @@ export default class RangePicker {
     to = new Date()
   } = {}) {
     this.selected = {from, to};
+    this.showDateFrom = new Date(from.getTime());
 
     this.render();
     this.initEventListeners();
@@ -170,11 +169,12 @@ export default class RangePicker {
 
   renderMonths(firstMonthDate) {
     const months = [];
-    const year = firstMonthDate.getFullYear();
+    const initTime = firstMonthDate.getTime();
     const month = firstMonthDate.getMonth();
 
     for (let i = 0; i < MONTHS_AT_ONE_TIME; i++) {
-      let date = new Date(year, month + i);
+      let date = new Date(initTime);
+      date.setMonth(month + i);
 
       months.push(this.renderOneMoth(date));
     }
