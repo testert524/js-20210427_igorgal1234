@@ -39,7 +39,10 @@ export default class RangePicker {
 
       this.element.dispatchEvent(new CustomEvent('date-select', {
         bubbles: true,
-        detail: { selected: this.selected }
+        detail: {
+          from: this.selected.from,
+          to: this.selected.to
+        }
       }));
     }
   }

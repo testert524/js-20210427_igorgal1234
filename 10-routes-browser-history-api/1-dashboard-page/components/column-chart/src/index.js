@@ -24,7 +24,7 @@ export default class ColumnChart {
     this.formatHeading = formatHeading;
 
     this.render();
-    this.update(range);
+    this.update(this.range.from, this.range.to);
   }
 
   render() {
@@ -32,11 +32,11 @@ export default class ColumnChart {
     this.subElements = this._getSubElements(this.element);
   }
 
-  async update(range) {
+  async update(from, to) {
     this._setLoadingInd();
-    const data = await this._loadData(range.from, range.to);
+    const data = await this._loadData(from, to);
     this._renderChart(data);
-    this.setNewRange(range.from, range.to);
+    this.setNewRange(from, to);
     this._removeLoadingInd();
 
     return data;

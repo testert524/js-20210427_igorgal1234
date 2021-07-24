@@ -210,11 +210,9 @@ export default class SortableTable {
     url.searchParams.set('_end', (start + length).toString());
 
     let loadedData = [];
-    try {
-      loadedData = await fetchJson(url.href);
-    } catch (err) {
-      console.log(err);
-    }
+
+    loadedData = await fetchJson(url.href);
+
     this.removeLoadingInd();
 
     return loadedData;
