@@ -107,7 +107,7 @@ export default class Page {
     const fromISO = from.toISOString();
     const toISO = to.toISOString();
 
-    const url = `api/dashboard/bestsellers?_start=1&_end=30&from=${fromISO}&to=${toISO}&_sort=title&_order=asc`;
+    const url = `api/dashboard/bestsellers?_start=0&_end=30&from=${fromISO}&to=${toISO}&_sort=title&_order=asc`;
     const data = await fetchJson(BACKEND_URL + url);
 
     this.components.sortableTable.updateTable(data);
